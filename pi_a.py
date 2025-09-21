@@ -4,11 +4,10 @@ import paho.mqtt.client as mqtt
 import time
 import random
 
-BROKER = "172.16.14.113"  # IP of Laptop #1 (your broker)
+BROKER = "172.20.10.2" 
 TOPIC_PUB = "sensor/pi_a"
 TOPIC_SUB = "led/pi_a"
 
-# Callback when connected
 def on_connect(client, userdata, flags, rc):
     if rc == 0:
         print(f"[Pi A] Connected to broker!")
@@ -17,11 +16,10 @@ def on_connect(client, userdata, flags, rc):
     else:
         print(f"[Pi A] Failed to connect, return code {rc}")
 
-# Callback when message is received
 def on_message(client, userdata, msg):
     print(f"[Pi A] Received on {msg.topic}: {msg.payload.decode()}")
 
-client = mqtt.Client("Pi_A")
+client = mqtt.Client(client_id="Pi_A", callback_api_version=mqtt.CallbackAPIVersion.VERSION1)
 client.on_connect = on_connect
 client.on_message = on_message
 
