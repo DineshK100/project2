@@ -1,47 +1,128 @@
-#!/usr/bin/env python3
-# pi_a.py - Simple MQTT test for Pi A
 import paho.mqtt.client as mqtt
 import time
 import random
 
+# Configuration
 BROKER = "172.20.10.2" 
-TOPIC_PUB = "sensor/pi_a"
-TOPIC_SUB = "led/pi_a"
+PORT = 1883
+LIGHT_SENSOR_TOPIC = "lightSensor"
+POTENTIOMETER_TOPIC = "threshold"
+STATUS_TOPIC = "Status/RaspberryPiA"
+
+LDR_THRESHOLD = 5  
+POTENTIOMETER_THRESHOLD = 5
+
+# Used for simulation
+LDR_MIN = 10    # Minimum LDR ADC value (no light)
+LDR_MAX = 100   # Maximum LDR ADC value (bright light)
+POT_MIN = 90    # Minimum potentiometer ADC value
+POT_MAX = 250   # Maximum potentiometer ADC value
+
+# Storing the last published values for ldr and potientiometer
+last_published_ldr = None
+last_published_pot = None
 
 def on_connect(client, userdata, flags, rc):
     if rc == 0:
-        print(f"[Pi A] Connected to broker!")
-        client.subscribe(TOPIC_SUB)
-        print(f"[Pi A] Subscribed to {TOPIC_SUB}")
+        print("PI A is connected to broker")
+        
+        client.publish(STATUS_TOPIC, "online", retain=True) # Need to publish online result 
+        print("PI A published online status")
+        
+        # Subscribe 
+        client.subscribe(LIGHT_SENSOR_TOPIC)
+        client.subscribe(POTENTIOMETER_TOPIC)
+        print(f"PI A is subscribed to {LIGHT_SENSOR_TOPIC} & {POTENTIOMETER_TOPIC}")
     else:
         print(f"[Pi A] Failed to connect, return code {rc}")
 
 def on_message(client, userdata, msg):
-    print(f"[Pi A] Received on {msg.topic}: {msg.payload.decode()}")
+    global last_published_ldr, last_published_pot
+    
+    topic = msg.topic
+    payload = msg.payload.decode()
+    
+    if topic == LIGHT_SENSOR_TOPIC:
+        last_published_ldr = float(payload)
+        print(f"PI A Updated last published LDR value: {last_published_ldr}")
+    elif topic == POTENTIOMETER_TOPIC:
+        last_published_pot = float(payload)
+        print(f"PI A Updated last published LDR value: {last_published_pot}")
 
+def normalize_value(value, min_val, max_val):
+    """Normalize the value between 0 - 1"""
+    normalized = (value - min_val) / (max_val - min_val)
+    return max(0.0, min(1.0, normalized))
+
+def should_publish_ldr(current_normalized):
+    if last_published_ldr is None:
+        return True 
+    return abs(current_normalized - last_published_ldr) > (LDR_THRESHOLD / 100.0)
+
+def should_publish_pot(current_normalized):
+    if last_published_pot is None:
+        return True 
+    return abs(current_normalized - last_published_pot) > (POTENTIOMETER_THRESHOLD / 100.0)
+
+# Creation of MQTT Client Object
 client = mqtt.Client(client_id="Pi_A", callback_api_version=mqtt.CallbackAPIVersion.VERSION1)
+
+# Will message sent to the broker if disconnects unexpectedly
+client.will_set(STATUS_TOPIC, "offline", retain=True)
+
 client.on_connect = on_connect
 client.on_message = on_message
 
 print(f"[Pi A] Connecting to broker at {BROKER}...")
 client.connect(BROKER, 1883, 60)
 
+# Creates thread to ensure network stuff is happening in the background
 client.loop_start()
 
 try:
     while True:
-        sensor_value = random.randint(0, 1023)
-        result = client.publish(TOPIC_PUB, sensor_value)
+        ldr_raw = random.randint(LDR_MIN, LDR_MAX)
+        pot_raw = random.randint(POT_MIN, POT_MAX)
+
+        ldr_normalized = normalize_value(ldr_raw, LDR_MIN, LDR_MAX)
+        pot_normalized = normalize_value(pot_raw, POT_MIN, POT_MAX)
         
-        if result.rc == mqtt.MQTT_ERR_SUCCESS:
-            print(f"[Pi A] Published sensor value: {sensor_value}")
-        else:
-            print(f"[Pi A] Failed to publish")
+        publish_ldr = should_publish_ldr(ldr_normalized)
+        publish_pot = should_publish_pot(pot_normalized)
+        
+        if publish_ldr or publish_pot:
+            print(f"Pi A publishing sensor data")
             
-        time.sleep(2)
+            if publish_ldr:
+                result_ldr = client.publish(LIGHT_SENSOR_TOPIC, f"{ldr_normalized:.3f}", retain=True)
+                if result_ldr.rc == mqtt.MQTT_ERR_SUCCESS:
+                    print(f"[Pi A] Published LDR: {ldr_normalized:.3f} (raw: {ldr_raw}) - RETAINED")
+                    last_published_ldr = ldr_normalized 
+                else:
+                    print(f"[Pi A] Failed to publish LDR value")
+            
+            if publish_pot:
+                result_pot = client.publish(POTENTIOMETER_TOPIC, f"{pot_normalized:.3f}", retain=True)
+                if result_pot.rc == mqtt.MQTT_ERR_SUCCESS:
+                    print(f"[Pi A] Published Potentiometer: {pot_normalized:.3f} (raw: {pot_raw}) - RETAINED")
+                    last_published_pot = pot_normalized  
+                else:
+                    print(f"[Pi A] Failed to publish potentiometer value")
+        
+        time.sleep(0.1)
         
 except KeyboardInterrupt:
-    print("\n[Pi A] Shutting down...")
+    print("\n[Pi A] Shutting down gracefully...")
+    
+    client.publish(STATUS_TOPIC, "offline", retain=True)
+    print(f"[Pi A] Published status: offline")
+    
+    time.sleep(0.5)
     client.loop_stop()
     client.disconnect()
     print("[Pi A] Disconnected")
+    
+except Exception as e:
+    print(f"[Pi A] Error: {e}")
+    client.loop_stop()
+    client.disconnect()
