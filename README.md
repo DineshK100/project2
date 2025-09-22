@@ -5,3 +5,7 @@ python3 -m venv project
 source project/bin/activate
 pip install paho-mqtt
 ```
+
+```bash
+mosquitto_sub -h localhost -t '#' -v
+```
