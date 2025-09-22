@@ -113,7 +113,6 @@ client.loop_start()
 
 try:
     while True:
-        # Read actual sensor values from ADC instead of random values
         ldr_raw = read_ldr()
         pot_raw = read_potentiometer()
 
