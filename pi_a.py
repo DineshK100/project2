@@ -1,10 +1,16 @@
 import paho.mqtt.client as mqtt
 import time
 import random
+import dotenv
+from dotenv import load_dotenv
+import os 
+
+load_dotenv()
 
 # Configuration
-BROKER = "172.20.10.2" 
-PORT = 1883
+BROKER = os.getenv('MQTT_BROKER')
+PORT = int(os.getenv('MQTT_PORT'))
+
 LIGHT_SENSOR_TOPIC = "lightSensor"
 POTENTIOMETER_TOPIC = "threshold"
 STATUS_TOPIC = "Status/RaspberryPiA"
@@ -65,7 +71,7 @@ def should_publish_pot(current_normalized):
     return abs(current_normalized - last_published_pot) > (POTENTIOMETER_THRESHOLD / 100.0)
 
 # Creation of MQTT Client Object
-client = mqtt.Client(client_id="Pi_A", callback_api_version=mqtt.CallbackAPIVersion.VERSION1)
+client = mqtt.Client(client_id="PI_A", callback_api_version=mqtt.CallbackAPIVersion.VERSION1)
 
 # Will message sent to the broker if disconnects unexpectedly
 client.will_set(STATUS_TOPIC, "offline", retain=True)
@@ -74,7 +80,7 @@ client.on_connect = on_connect
 client.on_message = on_message
 
 print(f"[Pi A] Connecting to broker at {BROKER}...")
-client.connect(BROKER, 1883, 60)
+client.connect(BROKER, PORT, 60)
 
 # Creates thread to ensure network stuff is happening in the background
 client.loop_start()
