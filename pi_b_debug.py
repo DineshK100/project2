@@ -15,9 +15,9 @@ STATUS_TOPIC_A = "Status/RaspberryPiA"
 STATUS_TOPIC_C = "Status/RaspberryPiC"
 
 # GPIO Pin assignments
-LED1_PIN = 11  # Light control LED
-LED2_PIN = 13  # Pi A status LED  
-LED3_PIN = 15  # Pi C status LED
+LED1_PIN = 17  # Light control LED
+LED2_PIN = 27  # Pi A status LED  
+LED3_PIN = 22  # Pi C status LED
 
 # State tracking
 pi_c_online = False
