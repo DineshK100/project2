@@ -43,7 +43,7 @@ def process_decision():
     global last_published_decision
     if current_light_value == None or current_threshold_value == None:
         print(f"PI C: Cannot make decision yet, current_light_value: {current_light_value} and current_threshold_value: {current_threshold_value}")
-    
+        return
     if current_light_value >= current_threshold_value:
         decision = "TurnOff"
     else:
@@ -53,6 +53,7 @@ def process_decision():
         result = client.publish(LIGHT_STATUS_TOPIC, decision, retain=True)
 
         if result.rc == mqtt.MQTT_ERR_SUCCESS:
+            last_published_decision = decision
             print(f"Pi C just published decision and it is {decision}")
         else:
             print(f"Pi C failed to publish decision")
@@ -78,7 +79,7 @@ def on_message(client, userdata, msg):
         last_published_decision = payload
         print(f"PI C: Updated last published decision: {last_published_decision}")
         
-client = mqtt.Client(client_id="PI_B", callback_api_version=mqtt.CallbackAPIVersion.VERSION1)
+client = mqtt.Client(client_id="PI_C", callback_api_version=mqtt.CallbackAPIVersion.VERSION1)
 client.will_set(STATUS_TOPIC, "offline", retain=True)
 
 client.on_connect = on_connect
