@@ -29,20 +29,17 @@ def on_connect(client, userdata, flags, rc):
         client.publish(STATUS_TOPIC, "online", retain=True, qos=2)
         print("PI C published online status")
         
-        # Subscribe with QoS 2
         client.subscribe(LIGHT_SENSOR_TOPIC, qos=2)
         client.subscribe(POTENTIOMETER_TOPIC, qos=2)
         client.subscribe(LIGHT_STATUS_TOPIC, qos=2)
         
         print(f"PI C is subscribed to {LIGHT_SENSOR_TOPIC}, {POTENTIOMETER_TOPIC} & {LIGHT_STATUS_TOPIC}")
         
-        # Reset last published decision on reconnect
         last_published_decision = None
     else:
         print(f"Pi C Failed to connect, return code {rc}")
 
 def process_decision():
-    """Process the light decision based on the threshold"""
     global last_published_decision, pending_decision_publish
     
     if current_light_value is None or current_threshold_value is None:
@@ -55,7 +52,7 @@ def process_decision():
     else:
         decision = "TurnOn"   # Less light = turn on
     
-    # Check if we need to publish (avoiding duplicates)
+    # Check if we need to publish
     should_publish = False
     
     if last_published_decision is None:
@@ -107,19 +104,17 @@ def on_message(client, userdata, msg):
 
 client = mqtt.Client(client_id="PI_C", callback_api_version=mqtt.CallbackAPIVersion.VERSION1)
 
-# Will message with QoS 2
 client.will_set(STATUS_TOPIC, "offline", qos=2, retain=True)
 
 client.on_connect = on_connect
 client.on_message = on_message
 
-# Connect to broker 
 print(f"PI C: Connecting to broker at {BROKER}...")
 client.connect(BROKER, PORT, 60)
 
 client.loop_start()
 
-print("PI C is now working and monitoring sensor values")
+print("PI C is now work")
 
 try:
     while True:

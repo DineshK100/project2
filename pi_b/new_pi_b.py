@@ -41,7 +41,8 @@ def cleanup_gpio():
 def on_connect(client, userdata, flags, rc):
     if rc == 0:
         print("PI B: Connected to broker")
-        # Subscribe with QoS 2
+        # Here, qos is turned on meaning that message is guaranteed to be delivered exactly once
+        # Also no duplicates
         client.subscribe(LIGHT_STATUS_TOPIC, qos=2)
         client.subscribe(STATUS_TOPIC_A, qos=2)
         client.subscribe(STATUS_TOPIC_C, qos=2)
@@ -65,29 +66,27 @@ def on_message(client, userdata, msg):
             GPIO.output(LED2_PIN, GPIO.LOW)
             print("PI B: LED2 OFF (Pi A offline)")
     
-    # Handle Raspberry Pi C status
     elif topic == STATUS_TOPIC_C:
         if payload == "online":
             pi_c_online = True
             GPIO.output(LED3_PIN, GPIO.HIGH)
             print("PI B: LED3 ON (Pi C online)")
-            # Update LED1 based on current light status
+            # Update LED1
             if last_light_status == "TurnOn":
                 GPIO.output(LED1_PIN, GPIO.HIGH)
-                print("PI B: LED1 ON (Pi C online and light should be on)")
+                print("PI B: LED1 ON")
             elif last_light_status == "TurnOff":
                 GPIO.output(LED1_PIN, GPIO.LOW)
-                print("PI B: LED1 OFF (Pi C online but light should be off)")
+                print("PI B: LED1 OFF")
         elif payload == "offline":
             pi_c_online = False
             GPIO.output(LED3_PIN, GPIO.LOW)
             GPIO.output(LED1_PIN, GPIO.LOW)  # Turn off LED1 when Pi C offline
-            print("PI B: LED3 OFF, LED1 OFF (Pi C offline)")
+            print("PI B: LED3 OFF, LED1 OFF")
     
     # Handle light control status
     elif topic == LIGHT_STATUS_TOPIC:
         last_light_status = payload
-        # LED1 only works if Pi C is online
         if pi_c_online:
             if payload == "TurnOn":
                 GPIO.output(LED1_PIN, GPIO.HIGH)
@@ -112,16 +111,14 @@ try:
     client.loop_forever()
     
 except KeyboardInterrupt:
-    print("\nPI B: Shutting down...")
+    print("\nPI B: Shutting down")
     # Turn off all LEDs
     GPIO.output(LED1_PIN, GPIO.LOW)
     GPIO.output(LED2_PIN, GPIO.LOW)
-    GPIO.output(LED3_PIN, GPIO.LOW)
-    print("PI B: All LEDs turned OFF")
-    
+    GPIO.output(LED3_PIN, GPIO.LOW)    
     client.disconnect()
     cleanup_gpio()
-    print("PI B: Disconnected and cleaned up")
+    print("PI B: Disconnected")
     
 except Exception as e:
     print(f"PI B Error: {e}")

@@ -22,13 +22,12 @@ spi = spidev.SpiDev()
 spi.open(0, 0)  # Bus 0, Device 0
 spi.max_speed_hz = 1000000
 
-# ADC channel assignments
 LDR_CHANNEL = 0         # Channel 0 for LDR
 POTENTIOMETER_CHANNEL = 1  # Channel 1 for potentiometer
 
-# ADC reading parameters (adjust based on your actual readings)
-LDR_MIN = 10    # Minimum LDR ADC value (no light)
-LDR_MAX = 100   # Maximum LDR ADC value (bright light)
+# ADC reading parameters
+LDR_MIN = 10    # Minimum LDR ADC value 
+LDR_MAX = 100   # Maximum LDR ADC value 
 POT_MIN = 90    # Minimum potentiometer ADC value
 POT_MAX = 250   # Maximum potentiometer ADC value
 
@@ -41,7 +40,6 @@ pending_ldr_publish = None
 pending_pot_publish = None
 
 def read_adc(channel):
-    """Read analog value from MCP3008 ADC channel"""
     # MCP3008 command format: start bit + single/diff + channel bits
     command = [1, (8 + channel) << 4, 0]
     adc_response = spi.xfer2(command)
@@ -51,11 +49,9 @@ def read_adc(channel):
     return adc_value
 
 def read_ldr():
-    """Read LDR value from ADC"""
     return read_adc(LDR_CHANNEL)
 
 def read_potentiometer():
-    """Read potentiometer value from ADC"""
     return read_adc(POTENTIOMETER_CHANNEL)
 
 def on_connect(client, userdata, flags, rc):
@@ -66,7 +62,7 @@ def on_connect(client, userdata, flags, rc):
         client.publish(STATUS_TOPIC, "online", retain=True, qos=2)
         print("PI A published online status")
         
-        # Subscribe with QoS 2
+        # Subscribe
         client.subscribe(LIGHT_SENSOR_TOPIC, qos=2)
         client.subscribe(POTENTIOMETER_TOPIC, qos=2)
         print(f"PI A is subscribed to {LIGHT_SENSOR_TOPIC} & {POTENTIOMETER_TOPIC}")
@@ -99,7 +95,6 @@ def on_message(client, userdata, msg):
             print(f"PI A Updated last published POT value: {last_published_pot}")
 
 def normalize_value(value, min_val, max_val):
-    """Normalize the value between 0 - 1"""
     normalized = (value - min_val) / (max_val - min_val)
     return max(0.0, min(1.0, normalized))
 
@@ -119,11 +114,10 @@ def should_publish_pot(current_normalized):
         return abs(current_normalized - pending_pot_publish) > (POTENTIOMETER_THRESHOLD / 100.0)
     return abs(current_normalized - last_published_pot) > (POTENTIOMETER_THRESHOLD / 100.0)
 
-# Creation of MQTT Client Object
+# Client object
 client = mqtt.Client(client_id="PI_A", callback_api_version=mqtt.CallbackAPIVersion.VERSION1)
 
-# Will message sent to the broker if disconnects unexpectedly - QoS 2
-client.will_set(STATUS_TOPIC, "offline", qos=2, retain=True)
+client.will_set(STATUS_TOPIC, "offline", qos=2, retain=True) # Will message
 
 client.on_connect = on_connect
 client.on_message = on_message

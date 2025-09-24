@@ -5,7 +5,6 @@ import os
 
 load_dotenv()
 
-# Configuration
 BROKER = os.getenv('MQTT_BROKER')
 PORT = int(os.getenv('MQTT_PORT'))
 
@@ -21,7 +20,7 @@ TOPICS = [
 led1_status_log = []
 
 def timestamp():
-    return datetime.now().strftime("%Y-%m-%d %H:%M:%S.%f")[:-3]  # Include milliseconds
+    return datetime.now().strftime("%Y-%m-%d %H:%M:%S.%f")[:-3]
 
 def on_connect(client, userdata, flags, rc):
     if rc == 0:
@@ -32,7 +31,7 @@ def on_connect(client, userdata, flags, rc):
             print(f"[{timestamp()}] Subscribed to '{topic}' (QoS {qos})")
         
         print(f"\n{'='*70}")
-        print("MQTT MONITOR - QoS 2 (Exactly Once Delivery)")
+        print("MQTT MONITOR")
         print("Monitoring all topics and tracking LED1 status changes")
         print(f"{'='*70}\n")
         
@@ -44,10 +43,8 @@ def on_message(client, userdata, msg):
     payload = msg.payload.decode()
     ts = timestamp()
     
-    # Log all messages
     print(f"[{ts}] {topic}: {payload}")
     
-    # Track LED1 status changes specifically
     if topic == "LightStatus":
         if payload == "TurnOn":
             led1_status_log.append((ts, "ON"))
@@ -60,7 +57,6 @@ def on_message(client, userdata, msg):
             print(f"*** LED1 TURNED OFF at {ts} ***")
             print(f"{'*'*50}")
     
-    # Log status changes
     elif "Status/" in topic:
         if payload == "online":
             print(f"    >> {topic.split('/')[-1]} is now ONLINE")
@@ -70,7 +66,7 @@ def on_message(client, userdata, msg):
 def print_led1_history():
     """Print the complete LED1 status history"""
     print(f"\n{'='*70}")
-    print("LED1 STATUS HISTORY (During this session)")
+    print("LED1 STATUS HISTORY")
     print(f"{'='*70}")
     if led1_status_log:
         for ts, status in led1_status_log:
@@ -79,7 +75,6 @@ def print_led1_history():
         print("No LED1 status changes recorded yet")
     print(f"{'='*70}\n")
 
-# Create MQTT client
 client = mqtt.Client(client_id="Monitor_Laptop2", callback_api_version=mqtt.CallbackAPIVersion.VERSION1)
 client.on_connect = on_connect
 client.on_message = on_message
@@ -94,7 +89,7 @@ try:
 except KeyboardInterrupt:
     print(f"\n[{timestamp()}] Monitor stopping...")
     
-    # Print LED1 history before exiting
+    # Print the history
     print_led1_history()
     
     client.disconnect()
